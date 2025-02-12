@@ -127,12 +127,12 @@ class ScanManager:
                 await self._update_scan_progress(scan_state, 5)
 
                 # Step 1: Enumerate subdomains
-                subdomains = await scanner.enumerate_subdomains(domain)
+    subdomains = await scanner.enumerate_subdomains(domain)
                 scan_state['subdomains_found'] = len(subdomains)
                 await self._update_scan_progress(scan_state, 20)
 
                 # Step 2: Collect URLs
-                urls = await scanner.collect_urls(subdomains)
+    urls = await scanner.collect_urls(subdomains)
                 scan_state['urls_scanned'] = len(urls)
                 await self._update_scan_progress(scan_state, 40)
 
@@ -144,8 +144,8 @@ class ScanManager:
                 total_params = sum(len(params) for _, params in param_urls)
                 processed_params = 0
 
-                for url, params in param_urls:
-                    for param in params:
+        for url, params in param_urls:
+            for param in params:
                         try:
                             vulnerabilities = await scanner.fuzz_parameter(url, param)
                             if vulnerabilities:
@@ -281,7 +281,7 @@ async def websocket_endpoint(websocket: WebSocket):
     websocket_clients.add(websocket)
     
     try:
-        while True:
+    while True:
             data = await websocket.receive_json()
             # Handle incoming WebSocket messages if needed
             logger.debug(f"Received WebSocket message: {data}")
