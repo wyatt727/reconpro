@@ -1,0 +1,4 @@
+aiohttp
+requests
+beautifulsoup4
+tqdm

@@ -1,3 +1,5 @@
+Below is the updated README.md file in its entirety. Note that the new version now highlights the use of a shared aiohttp session for improved asynchronous HTTP requests in the fuzzing process, along with other minor wording updates.
+
 # ReconPro
 
 **ReconPro** is a comprehensive reconnaissance and fuzzing platform written in Python. Designed for ethical hacking and authorized penetration testing, ReconPro combines advanced scanning techniques with robust external integrations—including GF, nuclei, subfinder, gau, and waybackurls—to thoroughly assess web targets. With a modular architecture, it is easy to maintain, update, and extend.
@@ -40,7 +42,10 @@ ReconPro continuously gathers and analyzes data by:
 
 - **Modular Design:**  
   Components are partitioned into distinct modules for scanning, scraping, detection, fuzzing, external integration, resource updating, and database management.
-
+  
+- **Efficient Asynchronous HTTP Requests:**  
+  ReconPro now uses a shared aiohttp ClientSession across modules, significantly reducing HTTP request overhead. Blocking calls (such as those for external tool integrations) are offloaded using asyncio.to_thread to ensure smooth, non-blocking execution.
+  
 - **Automatic Resource Updates:**  
   The updater module downloads and saves the latest payloads, nuclei templates, and GF patterns from GitHub.
 
@@ -69,10 +74,11 @@ ReconPro's architecture is based on a clear separation of concerns:
 - **Web Interface:** Offers a built-in dashboard via FastAPI for monitoring and managing scans.
 - **Configuration:** Centralizes global settings (timeouts, paths, API endpoints, etc.), ensuring flexibility without modifying core logic.
 
+Notably, the fuzzing module now reuses a shared aiohttp session for all HTTP calls. This design improvement cuts down on session initialization overhead and leverages asynchronous features to improve performance.
+
 ---
 
 ## Directory Structure
-
 ```
 reconpro/  
 ├── __init__.py  
@@ -111,7 +117,7 @@ reconpro/
   Analyzes HTTP responses to identify API endpoints and determine appropriate fuzzing strategies.
 
 - **fuzz.py:**  
-  Performs both GET and POST fuzzing—using difflib to compare baseline and fuzzed responses—and calls external scanners for in-depth analysis.
+  Performs both GET and POST fuzzing—using difflib to compare baseline and fuzzed responses—and calls external scanners for in-depth analysis. This module now accepts a shared aiohttp session for all HTTP requests, offering improved efficiency by offloading blocking operations.
 
 - **external.py:**  
   Wraps calls to external tools (GF and nuclei) to incorporate their scanning results into the vulnerability assessment.
@@ -141,7 +147,7 @@ reconpro/
 1. **Clone the repository:**
 
    ```sh
-   git clone https://github.com/wyatt727/reconpro.git  
+   git clone https://github.com/wyatt727/reconpro.git
    cd reconpro
    ```
 
@@ -156,26 +162,33 @@ reconpro/
    ```sh
    pip install -e .
    ```
+
 ---
 
 ## Usage
 
 To run the continuous scanning loop:
 
+   ```sh
    python reconpro/main.py -d http://testphp.vulnweb.com --interval 300
+   ```
 
 - **-d, --domain:** Specifies the target domain (e.g., example.com).  
 - **--interval:** Sets the delay (in seconds) between scan cycles (default is defined in config.py).
 
+The system now creates a shared aiohttp session which is reused for all HTTP requests during each scan cycle. This not only boosts performance but also reduces connection overhead.
+
 To launch the web interface:
 
+   ```sh
    python webui.py
+   ```
 
 The tool will:
 - Update necessary resources (payloads, nuclei templates, GF patterns).
 - Enumerate subdomains and gather URLs.
 - Scrape web content to find additional endpoints.
-- Fuzz parameters using both GET and POST methods.
+- Fuzz parameters using both GET and POST methods (with a shared session for all HTTP calls).
 - Execute external scans with GF and nuclei.
 - Store findings in a SQLite database.
 - Generate a detailed HTML report (saved in the `reports/` directory) at the end of each scan cycle.

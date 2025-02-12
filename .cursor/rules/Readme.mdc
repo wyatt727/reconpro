@@ -1,0 +1,5 @@
+---
+description: Helpful for when the user directly requests updates to a markdown file
+globs: *.md
+---
+Update the [README.md](mdc:README.md) file, then repeat back the updated [README.md](mdc:README.md) as a whole, but DO NOT put it in a codeblock or markdown formatted block. Just repeat it back in the markdown format, after making the changes

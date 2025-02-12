@@ -4,11 +4,24 @@ import asyncio
 import argparse
 import logging
 from datetime import datetime
+import aiohttp
+from config import SCAN_INTERVAL, TIMEOUT
 from core import scanner, scraper, detector, fuzz, external, updater, db
 from utils import file_helpers
-from config import SCAN_INTERVAL
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+async def run_payload_tests(session, fuzz_func, url, param, payloads):
+    # Create tasks for testing each payload concurrently.
+    tasks = [asyncio.create_task(fuzz_func(session, url, param, payload)) for payload in payloads]
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    for task in pending:
+        task.cancel()  # Cancel remaining tasks once one completes
+    for task in done:
+        result = task.result()
+        if result:
+            return result
+    return None
 
 async def run_scan_cycle(domain):
     logging.info("=== Starting new scan cycle for %s ===", domain)
@@ -20,28 +33,34 @@ async def run_scan_cycle(domain):
     param_urls = scanner.extract_parameterized_urls(all_urls)
     payloads = fuzz.load_payloads()
     vulnerabilities = []
-    # For each parameterized URL, try every payload
-    for url, params in param_urls:
-        for param in params:
-            # First try GET fuzzing
-            for payload in payloads:
-                record = await fuzz.fuzz_get_param(url, param, payload)
+    # Create one shared session for all HTTP requests in this scan cycle.
+    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as session:
+        for url, params in param_urls:
+            for param in params:
+                # First try GET fuzzing using the shared session.
+                record = await run_payload_tests(session, fuzz.fuzz_get_param, url, param, payloads)
                 if record:
                     vulnerabilities.append(record)
-                    break  # stop once a vulnerability is detected
-            else:
-                # If no GET vulnerability found, check if endpoint returns 405:
-                get_response = await fuzz.send_get_request(url, param)
-                if detector.is_method_not_allowed(get_response):
-                    for payload in payloads:
-                        record = await fuzz.fuzz_post_param(url, param, payload)
+                else:
+                    # If no GET vulnerability found, check if endpoint returns 405
+                    # using the updated send_get_request that accepts a session.
+                    get_response = await fuzz.send_get_request(session, url, param)
+                    if detector.is_method_not_allowed(get_response):
+                        record = await run_payload_tests(session, fuzz.fuzz_post_param, url, param, payloads)
                         if record:
                             vulnerabilities.append(record)
-                            break
     conn = db.init_db()
     for v in vulnerabilities:
-        db.insert_vulnerability(conn, v["url"], v["parameter"], v["payload"], v["method"],
-                                  v["similarity"], v["gf_matches"], v["nuclei_output"])
+        db.insert_vulnerability(
+            conn,
+            v["url"],
+            v["parameter"],
+            v["payload"],
+            v["method"],
+            v["similarity"],
+            v.get("gf_matches", ""),
+            v["nuclei_output"],
+        )
     db.close_db(conn)
     file_helpers.generate_report(domain)
     logging.info("=== Scan cycle complete at %s ===", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
@@ -56,7 +75,13 @@ def main():
     parser = argparse.ArgumentParser(description="ReconPro Full-Fledged Recon & Fuzzing Project")
     parser.add_argument("-d", "--domain", required=True, help="Target domain (e.g., example.com)")
     parser.add_argument("--interval", type=int, default=SCAN_INTERVAL, help="Scan interval in seconds")
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose debugging output")
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Verbose debugging enabled")
+
     try:
         asyncio.run(main_loop(args.domain, args.interval))
     except KeyboardInterrupt:

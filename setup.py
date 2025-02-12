@@ -7,6 +7,7 @@ setup(
     description="Full-Fledged Recon & Fuzzing Tool with Web Scraping, GF, and Nuclei Integration",
     author="Your Name",
     packages=find_packages(),
+    include_package_data=True,
     install_requires=[
         "aiohttp",
         "requests",

@@ -1,0 +1,12 @@
+Metadata-Version: 2.2
+Name: reconpro
+Version: 0.1.0
+Summary: Full-Fledged Recon & Fuzzing Tool with Web Scraping, GF, and Nuclei Integration
+Author: Your Name
+Requires-Dist: aiohttp
+Requires-Dist: requests
+Requires-Dist: beautifulsoup4
+Requires-Dist: tqdm
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: summary
