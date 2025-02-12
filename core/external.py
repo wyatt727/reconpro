@@ -8,7 +8,10 @@ from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 from .config import config
-from .retry import RetryHandler, CircuitBreaker
+from functools import wraps
+from datetime import datetime, timedelta
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ToolResult:
@@ -20,31 +23,57 @@ class ToolResult:
     duration: float
     timestamp: str
 
+@dataclass
+class CircuitBreakerConfig:
+    """Configuration for circuit breaker pattern"""
+    failure_threshold: int = 5
+    reset_timeout: int = 60
+    half_open_timeout: int = 30
+
+class CircuitBreaker:
+    """Circuit breaker decorator for handling failures"""
+    def __init__(self, config: CircuitBreakerConfig = None):
+        self.config = config or CircuitBreakerConfig()
+        self.failures = 0
+        self.last_failure_time = None
+        self.state = "CLOSED"
+
+    def __call__(self, func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            if self.state == "OPEN":
+                if datetime.now() - self.last_failure_time > timedelta(seconds=self.config.reset_timeout):
+                    self.state = "HALF_OPEN"
+                else:
+                    raise Exception("Circuit breaker is OPEN")
+
+            try:
+                result = await func(*args, **kwargs)
+                if self.state == "HALF_OPEN":
+                    self.state = "CLOSED"
+                    self.failures = 0
+                return result
+            except Exception as e:
+                self.failures += 1
+                self.last_failure_time = datetime.now()
+                if self.failures >= self.config.failure_threshold:
+                    self.state = "OPEN"
+                raise e
+        return wrapper
+
 class ToolExecutor:
-    """Advanced tool executor with process management"""
+    """Executes external security tools with proper error handling"""
     def __init__(self):
+        self.config = config.tools
         self.logger = logging.getLogger(__name__)
         self.retry_handler = RetryHandler()
         self._process_pool = {}
 
-    async def run_tool(
-        self,
-        command: str,
-        timeout: int = 60,
-        check: bool = True,
-        parse_json: bool = False
-    ) -> ToolResult:
-        """Run an external tool with timeout and output handling"""
-        start_time = asyncio.get_event_loop().time()
-        
+    async def run_tool(self, cmd: List[str], timeout: int = 300, parse_json: bool = False) -> Dict[str, Any]:
+        """Run an external tool with timeout"""
         try:
-            # Split command properly
-            if isinstance(command, str):
-                command = shlex.split(command)
-
-            # Create subprocess
             process = await asyncio.create_subprocess_exec(
-                *command,
+                *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
@@ -53,42 +82,33 @@ class ToolExecutor:
             self._process_pool[process.pid] = process
 
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=timeout
-                )
+                stdout, stderr = await asyncio.wait_for(process.communicate(), timeout)
             except asyncio.TimeoutError:
-                process.terminate()
-                await process.wait()
-                raise TimeoutError(f"Command timed out after {timeout} seconds: {' '.join(command)}")
+                process.kill()
+                raise TimeoutError(f"Tool execution timed out after {timeout} seconds")
             finally:
                 self._process_pool.pop(process.pid, None)
 
-            duration = asyncio.get_event_loop().time() - start_time
             output = stdout.decode().strip()
-            error = stderr.decode().strip() if stderr else None
+            error = stderr.decode().strip()
 
-            if check and process.returncode != 0:
-                raise RuntimeError(
-                    f"Command failed with return code {process.returncode}: {error or output}"
-                )
+            if process.returncode != 0:
+                raise RuntimeError(f"Tool execution failed: {error}")
 
             if parse_json and output:
                 try:
                     output = json.loads(output)
-                except json.JSONDecodeError as e:
-                    self.logger.warning("Failed to parse JSON output: %s", e)
+                except json.JSONDecodeError:
+                    logger.warning("Failed to parse JSON output")
 
-            return ToolResult(
-                command=' '.join(command),
-                output=output,
-                error=error,
-                return_code=process.returncode,
-                duration=duration,
-                timestamp=datetime.utcnow().isoformat()
-            )
+            return {
+                'output': output,
+                'error': error,
+                'return_code': process.returncode
+            }
 
         except Exception as e:
-            self.logger.error("Error running command '%s': %s", ' '.join(command), e)
+            logger.error(f"Tool execution error: {str(e)}")
             raise
 
     async def cleanup(self):
@@ -106,7 +126,7 @@ class NucleiRunner:
         self.executor = ToolExecutor()
         self.circuit_breaker = CircuitBreaker()
 
-    @circuit_breaker
+    @CircuitBreaker()
     async def scan(self, target: str, templates: List[str] = None) -> Dict[str, Any]:
         """Run Nuclei scan with specified templates"""
         cmd = config.get_nuclei_command(target)
@@ -115,7 +135,7 @@ class NucleiRunner:
                 cmd.extend(["-t", template])
 
         result = await self.executor.run_tool(cmd, timeout=300, parse_json=True)
-        return self._parse_nuclei_output(result.output)
+        return self._parse_nuclei_output(result['output'])
 
     def _parse_nuclei_output(self, output: str) -> Dict[str, Any]:
         """Parse Nuclei output into structured format"""
@@ -174,7 +194,7 @@ class GFRunner:
 
             try:
                 result = await self.executor.run_tool(cmd, timeout=60)
-                matches = [line for line in result.output.splitlines() if line.strip()]
+                matches = [line for line in result['output'].splitlines() if line.strip()]
                 if matches:
                     results[pattern] = matches
             except Exception as e:

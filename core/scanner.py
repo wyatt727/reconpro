@@ -8,17 +8,17 @@ from urllib.parse import urlparse, parse_qs
 from datetime import datetime
 from .config import config
 from .db import save_scan_result
-from .retry import RetryHandler
+from .retry import RetryHandler, RetryConfig
 
 class Scanner:
     """Advanced scanner class with rate limiting and concurrent execution"""
     def __init__(self):
         self.session = None
         self.semaphore = asyncio.Semaphore(config.scan.max_concurrent_requests)
-        self.retry_handler = RetryHandler(
+        self.retry_handler = RetryHandler(RetryConfig(
             max_retries=config.scan.max_retries,
-            delay=config.scan.retry_delay
-        )
+            initial_delay=config.scan.retry_delay
+        ))
         self.stats = {
             'start_time': None,
             'end_time': None,

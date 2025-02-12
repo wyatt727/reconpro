@@ -1,6 +1,7 @@
 README.md
 setup.py
 core/__init__.py
+core/config.py
 core/db.py
 core/dependencies.py
 core/detector.py
@@ -18,6 +19,8 @@ reconpro.egg-info/dependency_links.txt
 reconpro.egg-info/entry_points.txt
 reconpro.egg-info/requires.txt
 reconpro.egg-info/top_level.txt
+reports/__init__.py
+static/__init__.py
 tests/test_db.py
 tests/test_detector.py
 tests/test_file_helpers.py
