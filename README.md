@@ -1,8 +1,6 @@
-Below is the updated README.md file in its entirety. Note that the new version now highlights the use of a shared aiohttp session for improved asynchronous HTTP requests in the fuzzing process, along with other minor wording updates.
-
 # ReconPro
 
-**ReconPro** is a comprehensive reconnaissance and fuzzing platform written in Python. Designed for ethical hacking and authorized penetration testing, ReconPro combines advanced scanning techniques with robust external integrations—including GF, nuclei, subfinder, gau, and waybackurls—to thoroughly assess web targets. With a modular architecture, it is easy to maintain, update, and extend.
+**ReconPro** is a comprehensive web security scanning and reconnaissance platform written in Python. Designed for ethical hacking and authorized penetration testing, ReconPro combines advanced scanning techniques with robust external integrations—including GF, nuclei, subfinder, gau, and waybackurls—to thoroughly assess web targets. With a modular architecture and an advanced web interface, it provides real-time control and monitoring of security assessments.
 
 ---
 
@@ -27,59 +25,75 @@ Below is the updated README.md file in its entirety. Note that the new version n
 
 ## Overview
 
-ReconPro continuously gathers and analyzes data by:
-- Automatically updating necessary resources (payloads, nuclei templates, GF patterns) from GitHub.
-- Enumerating subdomains and extracting URLs using tools like subfinder, gau, and waybackurls.
-- Scraping both live and archived pages to discover hidden endpoints.
-- Dynamically detecting API endpoints and handling "405 Method Not Allowed" responses by switching between GET and POST fuzzing.
-- Fuzzing discovered parameters with comprehensive payloads.
-- Integrating external scanning tools (GF and nuclei) for enhanced vulnerability analysis.
-- Persistently storing vulnerability records in a SQLite database and generating detailed HTML, CSV, and JSON reports.
-- Providing real-time scan progress and detailed monitoring via an integrated FastAPI web interface.
+ReconPro provides a comprehensive web security assessment platform with:
+- Advanced scan management with prioritization and queuing capabilities
+- Real-time web interface for controlling and monitoring scans
+- Automatic resource updates (payloads, nuclei templates, GF patterns) from GitHub
+- Intelligent subdomain enumeration and URL discovery
+- Advanced fuzzing with smart payload selection
+- Robust error handling and retry mechanisms
+- Comprehensive reporting and real-time monitoring
+- Integration with popular security tools
 
 ---
 
 ## Features
 
-- **Modular Design:**  
-  Components are partitioned into distinct modules for scanning, scraping, detection, fuzzing, external integration, resource updating, and database management.
+- **Advanced Scan Management:**  
+  - Priority-based scan queue system
+  - Concurrent scan execution with resource management
+  - Pause/Resume/Stop functionality for active scans
+  - Real-time progress monitoring
   
-- **Efficient Asynchronous HTTP Requests:**  
-  ReconPro now uses a shared aiohttp ClientSession across modules, significantly reducing HTTP request overhead. Blocking calls (such as those for external tool integrations) are offloaded using asyncio.to_thread to ensure smooth, non-blocking execution.
+- **Modern Web Interface:**  
+  - Real-time scan control and monitoring
+  - Live vulnerability detection updates
+  - Advanced configuration options
+  - Dark mode support
+  - Interactive data visualization
+  - Export functionality for findings
   
-- **Automatic Resource Updates:**  
-  The updater module downloads and saves the latest payloads, nuclei templates, and GF patterns from GitHub.
-
-- **Comprehensive Web Scraping:**  
-  Extracts additional endpoints by traversing both live and archived pages.
-
-- **Intelligent Fuzzing:**  
-  Switches between GET and POST fuzzing based on response analysis (e.g., handling 405 errors and API-specific responses) to maximize vulnerability detection.
-
-- **External Tool Integration:**  
-  Seamlessly invokes GF and nuclei to enhance the scanning process with additional insights.
-
-- **Web Interface:**  
-  A FastAPI-based dashboard that not only displays vulnerability records but also offers real-time insights into scan progress and detailed reporting.
-
-- **Real-time Detailed Monitoring:**  
-  The dashboard provides dynamic updates on discovered subdomains, collected URLs, scanning progress, vulnerabilities identified, and generated reports.
-
-- **Continuous Reporting:**  
-  Detailed HTML (or CSV/JSON) reports are generated while findings are stored persistently in a SQLite database.
+- **Efficient Asynchronous Processing:**  
+  - Shared aiohttp ClientSession for optimized HTTP requests
+  - Advanced rate limiting and concurrency control
+  - Circuit breaker pattern for failure handling
+  - Smart retry mechanisms with exponential backoff
+  
+- **Intelligent Scanning:**  
+  - Smart payload selection based on context
+  - Adaptive scanning based on response analysis
+  - Advanced parameter extraction and analysis
+  - Comprehensive vulnerability detection
+  
+- **Robust Error Handling:**  
+  - Circuit breaker pattern for external services
+  - Advanced retry strategies with backoff
+  - Comprehensive error logging and monitoring
+  - Graceful failure handling
+  
+- **Advanced Reporting:**  
+  - Real-time vulnerability tracking
+  - Multiple export formats (HTML, CSV, JSON)
+  - Detailed scan statistics and metrics
+  - Advanced filtering and search capabilities
 
 ---
 
 ## Architecture and Design
 
-ReconPro's architecture is based on a clear separation of concerns:
-- **Core Modules:** Orchestrate scanning, scraping, detection, fuzzing, and external integrations. The main scanning loop in `main.py` coordinates these continuous tasks.
-- **Utility Modules:** Provide essential support functions for file handling, report generation, and dependency checks.
-- **Web Interface:** A FastAPI-based dashboard (`webui.py`) that not only displays stored vulnerability records but also updates users with real-time scanning progress.
-- **Asynchronous Efficiency:** Utilizes a shared aiohttp ClientSession across modules to optimize HTTP requests and offloads blocking operations using asyncio techniques.
-- **Configuration:** Centralizes settings in `config.py` for timeouts, directory paths, API endpoints, and scan intervals, making adjustments straightforward.
+ReconPro's architecture emphasizes:
+- **Modularity:** Clear separation of concerns with independent modules
+- **Scalability:** Efficient resource management and concurrent processing
+- **Reliability:** Comprehensive error handling and recovery mechanisms
+- **Usability:** Intuitive web interface with real-time control and monitoring
+- **Performance:** Optimized async operations and smart resource utilization
 
-Notably, the fuzzing module now reuses a shared aiohttp session for all HTTP calls. This design improvement cuts down on session initialization overhead and leverages asynchronous features to improve performance.
+Key components:
+- **Scan Manager:** Coordinates scan execution with priority queue
+- **Web Interface:** FastAPI-based dashboard for control and monitoring
+- **Core Modules:** Handle scanning, fuzzing, and vulnerability detection
+- **External Integration:** Seamless integration with security tools
+- **Database:** Efficient storage and retrieval of findings
 
 ---
 
@@ -96,74 +110,71 @@ reconpro/
 │   ├── detector.py  
 │   ├── fuzz.py  
 │   ├── external.py  
+│   ├── retry.py  
 │   ├── updater.py  
 │   └── db.py  
 ├── utils/  
 │   ├── __init__.py  
 │   └── file_helpers.py  
+├── static/  
+│   ├── css/  
+│   ├── js/  
+│   └── img/  
+├── templates/  
 ├── data/  
 ├── tests/  
 ├── webui.py  
 ├── requirements.txt  
 └── setup.py
 ```
+
 ---
 
 ## Module Breakdown
 
 ### Core Modules
 - **scanner.py:**  
-  Enumerates subdomains, collects URLs using tools like subfinder, gau, and waybackurls, and extracts GET parameterized URLs for fuzzing.
-
-- **scraper.py:**  
-  Retrieves web pages asynchronously and uses scraping techniques to discover additional endpoints.
-
-- **detector.py:**  
-  Analyzes HTTP responses to identify API endpoints and determine appropriate fuzzing strategies.
+  Advanced scanning with improved async handling and rate limiting
 
 - **fuzz.py:**  
-  Performs both GET and POST fuzzing—using difflib to compare baseline and fuzzed responses—and calls external scanners for in-depth analysis. This module now accepts a shared aiohttp session for all HTTP requests, offering improved efficiency by offloading blocking operations.
+  Smart fuzzing with context-aware payload selection and response analysis
 
-- **external.py:**  
-  Wraps calls to external tools (GF and nuclei) to incorporate their scanning results into the vulnerability assessment.
-
-- **updater.py:**  
-  Keeps payloads, nuclei templates, and GF patterns up to date by downloading them from GitHub.
+- **retry.py:**  
+  Robust retry handling with circuit breaker pattern
 
 - **db.py:**  
-  Manages the SQLite database for storing and retrieving vulnerability records.
+  Async database operations with improved organization
 
-### Utility Modules
-- **file_helpers.py:**  
-  Contains helper functions for report generation (HTML, CSV, JSON) and other file operations.
+- **external.py:**  
+  Enhanced external tool execution and output management
 
 ### Web Interface
 - **webui.py:**  
-  Implements a FastAPI-based dashboard that displays vulnerability records, allows triggering of new scans, and serves generated reports.
+  FastAPI-based dashboard with real-time updates and scan control
+
+- **static/js/scan-manager.js:**  
+  Advanced frontend scan management and monitoring
 
 ### Configuration
 - **config.py:**  
-  Centralizes settings such as timeouts, scan intervals, concurrency levels, directory paths, and GitHub API endpoints.
+  Centralized configuration with enhanced customization options
 
 ---
 
 ## Installation
 
 1. **Clone the repository:**
-
    ```sh
    git clone https://github.com/wyatt727/reconpro.git
    cd reconpro
    ```
 
 2. **Install dependencies:**
-
    ```sh
    pip install -r requirements.txt
    ```
 
 3. **Optional: Install in editable mode:**
-
    ```sh
    pip install -e .
    ```
@@ -172,49 +183,56 @@ reconpro/
 
 ## Usage
 
-To run the continuous scanning loop – which now automatically starts the FastAPI dashboard and opens your default browser for real-time monitoring – use:
+Start the ReconPro web interface:
 ```sh
-   python reconpro/main.py -d http://testphp.vulnweb.com --interval 300
+python reconpro/main.py
 ```
-- **-d, --domain:** Specifies the target domain (e.g., example.com).  
-- **--interval:** Sets the delay (in seconds) between scan cycles (default is defined in config.py).
 
-The system automatically launches the web UI, opens your browser to display the dashboard, and continuously updates scan progress in real time.
+Access the dashboard at `http://localhost:8000` to:
+- Configure and launch new scans
+- Monitor active scans in real-time
+- View and export findings
+- Manage scan queue and priorities
+
+Command-line options:
+- **--port:** Web interface port (default: 8000)
+- **--host:** Web interface host (default: localhost)
+- **--config:** Path to custom configuration file
 
 ---
 
 ## Future Enhancements
 
-- **Enhanced Error Handling:**  
-  Improved retry mechanisms and error management for network requests and interactions with external tools.
-
-- **Advanced Web Dashboard:**  
-  Additional features for real-time monitoring and control via the FastAPI web interface.
-
-- **Extended Testing Suite:**  
-  More comprehensive unit and integration tests to boost reliability.
-
-- **Dynamic Configuration:**  
-  Support for external configuration files (YAML/JSON) to offer more granular control over scan parameters.
-
-- **Multi-Target Scanning:**  
-  Capability to scan multiple domains concurrently.
+- **Enhanced Scan Management:**
+  - Distributed scanning capabilities
+  - Advanced scheduling options
+  - Custom scan templates
+  
+- **Improved Reporting:**
+  - Custom report templates
+  - Advanced data visualization
+  - Integration with security platforms
+  
+- **Extended Functionality:**
+  - Additional security tool integrations
+  - Custom payload generators
+  - Machine learning-based analysis
 
 ---
 
 ## Contributing
 
 Contributions are welcome! Please follow these guidelines:
-- Fork the repository.
-- Create a feature branch.
-- Commit your changes with clear, descriptive messages.
-- Open a pull request detailing your modifications.
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes with clear messages
+4. Open a pull request with details
 
-For major changes, please open an issue first to discuss your proposed changes.
+For major changes, please open an issue first.
 
 ---
 
 ## License
 
 This project is provided for educational and authorized penetration testing purposes only.  
-(Include your license information here, e.g., MIT License.)
+(Include your license information here)
