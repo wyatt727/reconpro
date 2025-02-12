@@ -28,13 +28,14 @@ Below is the updated README.md file in its entirety. Note that the new version n
 ## Overview
 
 ReconPro continuously gathers and analyzes data by:
-- Updating payloads, nuclei templates, and GF patterns from GitHub.
-- Enumerating subdomains and collecting URLs using external tools.
-- Scraping live and historical web pages to uncover hidden endpoints.
-- Detecting API endpoints and "405 Method Not Allowed" responses to toggle between GET and POST fuzzing.
-- Fuzzing discovered parameters with a wide array of payloads.
-- Running external scans with GF and nuclei to further analyze potential vulnerabilities.
-- Storing vulnerability records in a SQLite database and generating human-readable reports.
+- Automatically updating necessary resources (payloads, nuclei templates, GF patterns) from GitHub.
+- Enumerating subdomains and extracting URLs using tools like subfinder, gau, and waybackurls.
+- Scraping both live and archived pages to discover hidden endpoints.
+- Dynamically detecting API endpoints and handling "405 Method Not Allowed" responses by switching between GET and POST fuzzing.
+- Fuzzing discovered parameters with comprehensive payloads.
+- Integrating external scanning tools (GF and nuclei) for enhanced vulnerability analysis.
+- Persistently storing vulnerability records in a SQLite database and generating detailed HTML, CSV, and JSON reports.
+- Providing real-time scan progress and detailed monitoring via an integrated FastAPI web interface.
 
 ---
 
@@ -59,7 +60,10 @@ ReconPro continuously gathers and analyzes data by:
   Seamlessly invokes GF and nuclei to enhance the scanning process with additional insights.
 
 - **Web Interface:**  
-  A FastAPI-based dashboard allows you to view vulnerability records, trigger scans, and access generated reports.
+  A FastAPI-based dashboard that not only displays vulnerability records but also offers real-time insights into scan progress and detailed reporting.
+
+- **Real-time Detailed Monitoring:**  
+  The dashboard provides dynamic updates on discovered subdomains, collected URLs, scanning progress, vulnerabilities identified, and generated reports.
 
 - **Continuous Reporting:**  
   Detailed HTML (or CSV/JSON) reports are generated while findings are stored persistently in a SQLite database.
@@ -69,10 +73,11 @@ ReconPro continuously gathers and analyzes data by:
 ## Architecture and Design
 
 ReconPro's architecture is based on a clear separation of concerns:
-- **Core Modules:** Handle scanning, scraping, detection, fuzzing, and integration with external tools.
-- **Utility Modules:** Provide support functions for file handling and report generation.
-- **Web Interface:** Offers a built-in dashboard via FastAPI for monitoring and managing scans.
-- **Configuration:** Centralizes global settings (timeouts, paths, API endpoints, etc.), ensuring flexibility without modifying core logic.
+- **Core Modules:** Orchestrate scanning, scraping, detection, fuzzing, and external integrations. The main scanning loop in `main.py` coordinates these continuous tasks.
+- **Utility Modules:** Provide essential support functions for file handling, report generation, and dependency checks.
+- **Web Interface:** A FastAPI-based dashboard (`webui.py`) that not only displays stored vulnerability records but also updates users with real-time scanning progress.
+- **Asynchronous Efficiency:** Utilizes a shared aiohttp ClientSession across modules to optimize HTTP requests and offloads blocking operations using asyncio techniques.
+- **Configuration:** Centralizes settings in `config.py` for timeouts, directory paths, API endpoints, and scan intervals, making adjustments straightforward.
 
 Notably, the fuzzing module now reuses a shared aiohttp session for all HTTP calls. This design improvement cuts down on session initialization overhead and leverages asynchronous features to improve performance.
 
@@ -167,31 +172,14 @@ reconpro/
 
 ## Usage
 
-To run the continuous scanning loop:
-
-   ```sh
+To run the continuous scanning loop – which now automatically starts the FastAPI dashboard and opens your default browser for real-time monitoring – use:
+```sh
    python reconpro/main.py -d http://testphp.vulnweb.com --interval 300
-   ```
-
+```
 - **-d, --domain:** Specifies the target domain (e.g., example.com).  
 - **--interval:** Sets the delay (in seconds) between scan cycles (default is defined in config.py).
 
-The system now creates a shared aiohttp session which is reused for all HTTP requests during each scan cycle. This not only boosts performance but also reduces connection overhead.
-
-To launch the web interface:
-
-   ```sh
-   python webui.py
-   ```
-
-The tool will:
-- Update necessary resources (payloads, nuclei templates, GF patterns).
-- Enumerate subdomains and gather URLs.
-- Scrape web content to find additional endpoints.
-- Fuzz parameters using both GET and POST methods (with a shared session for all HTTP calls).
-- Execute external scans with GF and nuclei.
-- Store findings in a SQLite database.
-- Generate a detailed HTML report (saved in the `reports/` directory) at the end of each scan cycle.
+The system automatically launches the web UI, opens your browser to display the dashboard, and continuously updates scan progress in real time.
 
 ---
 

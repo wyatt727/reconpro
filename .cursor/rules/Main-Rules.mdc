@@ -17,6 +17,3 @@ globs: *
 
 # RULE 4
 - ALWAYS update [README.md](mdc:README.md) after any changes to ensure that it's always up to date
-
-# RULE 5
-- If the user directly requests updates to [README.md](mdc:README.md). Repeat back the updated [README.md](mdc:README.md) as a whole but in a textblock rather than MD format in order to avoid escape formatting errors 

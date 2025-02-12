@@ -2,6 +2,7 @@ README.md
 setup.py
 core/__init__.py
 core/db.py
+core/dependencies.py
 core/detector.py
 core/external.py
 core/fuzz.py
@@ -10,6 +11,7 @@ core/scanner.py
 core/scraper.py
 core/updater.py
 reconpro/__init__.py
+reconpro/main.py
 reconpro.egg-info/PKG-INFO
 reconpro.egg-info/SOURCES.txt
 reconpro.egg-info/dependency_links.txt

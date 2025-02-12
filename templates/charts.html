@@ -1,120 +1,151 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>ReconPro Charts</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <!-- Include Chart.js from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  </head>
-  <body>
-    <div class="header">
-      <h1>ReconPro Real‑Time Charts</h1>
-      <a href="/" class="btn">Dashboard</a>
+{% extends "base.html" %}
+
+{% block title %}ReconPro - Analytics{% endblock %}
+
+{% block content %}
+<!-- Analytics Overview -->
+<div class="row g-4 mb-4">
+    <!-- Vulnerability Trends -->
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Vulnerability Trends</h5>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-secondary" data-range="7d">7D</button>
+                    <button class="btn btn-sm btn-outline-secondary active" data-range="30d">30D</button>
+                    <button class="btn btn-sm btn-outline-secondary" data-range="90d">90D</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="trendChart" height="300"></canvas>
+            </div>
+        </div>
     </div>
-    <p>Last updated: {{ timestamp }}</p>
-    <div id="status">Connecting to live updates...</div>
-    <div class="chart-container" style="width: 45%; display: inline-block;">
-      <canvas id="methodChart"></canvas>
+
+    <!-- Severity Distribution -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Severity Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="severityChart" height="300"></canvas>
+            </div>
+        </div>
     </div>
-    <div class="chart-container" style="width: 45%; display: inline-block;">
-      <canvas id="timeSeriesChart"></canvas>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Vulnerability Types -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Vulnerability Types</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="typeChart" height="300"></canvas>
+            </div>
+        </div>
     </div>
-    
-    <script>
-      const statusDiv = document.getElementById("status");
 
-      // Initialize Method Chart (Doughnut Chart)
-      const ctxMethod = document.getElementById('methodChart').getContext('2d');
-      const methodChart = new Chart(ctxMethod, {
-          type: 'doughnut',
-          data: {
-              labels: ['GET', 'POST'],
-              datasets: [{
-                  data: [0, 0],
-                  backgroundColor: ['#36A2EB', '#FF6384']
-              }]
-          },
-          options: {
-              responsive: true,
-              plugins: {
-                  title: {
-                      display: true,
-                      text: 'Vulnerabilities by Method'
-                  }
-              }
-          }
-      });
+    <!-- HTTP Methods -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">HTTP Methods Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="methodChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
 
-      // Initialize Time Series Chart (Line Chart)
-      const ctxTime = document.getElementById('timeSeriesChart').getContext('2d');
-      const timeSeriesChart = new Chart(ctxTime, {
-          type: 'line',
-          data: {
-              labels: [],
-              datasets: [{
-                  label: 'Total Vulnerabilities',
-                  data: [],
-                  fill: false,
-                  borderColor: 'rgb(75, 192, 192)',
-                  tension: 0.1
-              }]
-          },
-          options: {
-              responsive: true,
-              plugins: {
-                  title: {
-                      display: true,
-                      text: 'Vulnerability Trend'
-                  }
-              },
-              scales: {
-                  x: {
-                      type: 'time',
-                      time: {
-                          unit: 'minute'
-                      }
-                  }
-              }
-          }
-      });
+<div class="row g-4">
+    <!-- Response Time Analysis -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Response Time Analysis</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="responseTimeChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
 
-      // WebSocket to receive live updates for charts
-      const ws = new WebSocket("ws://" + window.location.host + "/ws");
+    <!-- Parameter Analysis -->
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0">Most Common Parameters</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="parameterChart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
 
-      ws.onopen = function(event) {
-          statusDiv.innerText = "Connected to live chart updates.";
-      };
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Export Analytics</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="exportForm">
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <select class="form-select" name="dateRange">
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d" selected>Last 30 Days</option>
+                            <option value="90d">Last 90 Days</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                    </div>
+                    <div class="mb-3 date-range d-none">
+                        <div class="row">
+                            <div class="col">
+                                <label class="form-label">Start Date</label>
+                                <input type="date" class="form-control" name="startDate">
+                            </div>
+                            <div class="col">
+                                <label class="form-label">End Date</label>
+                                <input type="date" class="form-control" name="endDate">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Format</label>
+                        <select class="form-select" name="format">
+                            <option value="pdf">PDF Report</option>
+                            <option value="csv">CSV</option>
+                            <option value="json">JSON</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="includeCharts" checked>
+                            <label class="form-check-label">Include Charts</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="exportBtn">Export</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-      ws.onmessage = function(event) {
-          try {
-              const data = JSON.parse(event.data);
-              if(data.event === "status_update") {
-                  // Update the doughnut chart with GET and POST counts
-                  methodChart.data.datasets[0].data = [data.GET_count, data.POST_count];
-                  methodChart.update();
-
-                  // Update the time series chart with total count
-                  const now = new Date(data.timestamp);
-                  timeSeriesChart.data.labels.push(now);
-                  timeSeriesChart.data.datasets[0].data.push(data.vulnerability_count);
-                  // Optionally, limit number of points for clarity
-                  if(timeSeriesChart.data.labels.length > 20) {
-                      timeSeriesChart.data.labels.shift();
-                      timeSeriesChart.data.datasets[0].data.shift();
-                  }
-                  timeSeriesChart.update();
-              } else if(data.event === "scan_triggered") {
-                  statusDiv.innerText = data.message + " (" + data.timestamp + ")";
-              }
-          } catch (e) {
-              console.log("Chart message error:", e);
-          }
-      };
-
-      ws.onclose = function(event) {
-          statusDiv.innerText = "Disconnected from live chart updates.";
-      };
-    </script>
-  </body>
-</html>
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/analytics.js"></script>
+{% endblock %}

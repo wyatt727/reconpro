@@ -1,0 +1,236 @@
+/* Global Styles */
+:root {
+    --header-height: 60px;
+    --footer-height: 60px;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Dark mode overrides */
+[data-bs-theme="dark"] {
+    --bs-body-bg: #1a1d21;
+    --bs-body-color: #e9ecef;
+    --bs-card-bg: #2a2d31;
+    --bs-card-border-color: #3a3d41;
+}
+
+/* Layout */
+.container-fluid {
+    max-width: 1600px;
+    padding: 1rem;
+    flex: 1;
+}
+
+/* Cards */
+.card {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-title {
+    font-weight: 600;
+    margin-bottom: 1.25rem;
+}
+
+/* Stats Cards */
+.card h2 {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* Tables */
+.table {
+    margin-bottom: 0;
+}
+
+.table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.875rem;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--bs-table-hover-bg);
+}
+
+/* Text utilities */
+.text-break {
+    word-break: break-word;
+    max-width: 300px;
+}
+
+/* Buttons */
+.btn {
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s;
+}
+
+.btn i {
+    font-size: 1rem;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Forms */
+.form-control, .form-select {
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+/* Alerts */
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+/* Badges */
+.badge {
+    font-weight: 500;
+    padding: 0.5em 0.75em;
+}
+
+/* Toast notifications */
+.toast {
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-card-border-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toast-header {
+    border-bottom: 1px solid var(--bs-card-border-color);
+    background: transparent;
+}
+
+/* Chart containers */
+.chart-container {
+    position: relative;
+    margin: auto;
+}
+
+/* Footer */
+.footer {
+    background-color: var(--bs-body-bg) !important;
+    border-top: 1px solid var(--bs-card-border-color);
+    color: var(--bs-body-color);
+}
+
+/* Navbar */
+.navbar {
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.nav-link {
+    font-weight: 500;
+    padding: 0.5rem 1rem !important;
+}
+
+/* Dark mode toggle */
+.bd-mode-toggle {
+    z-index: 1500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .text-break {
+        max-width: 200px;
+    }
+
+    .table-responsive {
+        margin: 0 -1rem;
+    }
+}
+
+/* Loading states */
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+    position: relative;
+}
+
+.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2rem;
+    height: 2rem;
+    margin: -1rem 0 0 -1rem;
+    border: 3px solid var(--bs-primary);
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner 0.75s linear infinite;
+}
+
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Header */
+.header {
+    background-color: #004080;
+    color: white;
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* WebSocket status message */
+#status {
+    margin: 15px 0;
+    font-style: italic;
+}
+
+/* Responsive layout tweaks */
+@media (max-width: 600px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+} 

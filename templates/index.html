@@ -1,102 +1,225 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>ReconPro Dashboard</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <script>
-      // Optionally, add JavaScript for client-side filtering or refresh.
-    </script>
-  </head>
-  <body>
-    <div class="header">
-      <h1>ReconPro Dashboard</h1>
-      <form action="/" method="get" id="filterForm">
-        <label for="method">Method:</label>
-        <select name="method" id="method">
-          <option value="" {% if filter.method == "" %}selected{% endif %}>All</option>
-          <option value="GET" {% if filter.method == "GET" %}selected{% endif %}>GET</option>
-          <option value="POST" {% if filter.method == "POST" %}selected{% endif %}>POST</option>
-        </select>
-        <label for="start_date">Start Date:</label>
-        <input type="date" name="start_date" id="start_date" value="{{ filter.start_date }}">
-        <label for="end_date">End Date:</label>
-        <input type="date" name="end_date" id="end_date" value="{{ filter.end_date }}">
-        <button type="submit" class="btn">Filter</button>
-      </form>
-      <button id="scanBtn" class="btn">Trigger New Scan</button>
-      <a href="/charts" class="btn">View Charts</a>
+{% extends "base.html" %}
+
+{% block title %}ReconPro - Dashboard{% endblock %}
+
+{% block content %}
+<!-- Status Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card h-100 border-primary">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Active Scans</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="card-title mb-0" id="activeScanCount">0</h2>
+                    <div class="ms-auto">
+                        <i class="fas fa-radar fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <p>Last updated: {{ timestamp }}</p>
-    <div id="status">Connecting to real‑time updates...</div>
-    <h2>Vulnerabilities</h2>
-    {% if vulnerabilities %}
-      <table>
-        <tr>
-          <th>ID</th>
-          <th>URL</th>
-          <th>Parameter</th>
-          <th>Payload</th>
-          <th>Method</th>
-          <th>Similarity</th>
-          <th>GF Matches</th>
-          <th>Nuclei Output</th>
-          <th>Timestamp</th>
-        </tr>
-        {% for vuln in vulnerabilities %}
-          <tr>
-            <td>{{ vuln[0] }}</td>
-            <td>{{ vuln[1] }}</td>
-            <td>{{ vuln[2] }}</td>
-            <td>{{ vuln[3] }}</td>
-            <td>{{ vuln[4] }}</td>
-            <td>{{ "%.2f"|format(vuln[5]) }}</td>
-            <td>{{ vuln[6] }}</td>
-            <td>{{ vuln[7] }}</td>
-            <td>{{ vuln[8] }}</td>
-          </tr>
-        {% endfor %}
-      </table>
-    {% else %}
-      <p>No vulnerabilities found.</p>
-    {% endif %}
-    <script>
-      // Establish a WebSocket connection for real‑time updates.
-      const ws = new WebSocket("ws://" + window.location.host + "/ws");
-      const statusDiv = document.getElementById("status");
-      
-      ws.onopen = function(event) {
-        statusDiv.innerText = "Connected to real‑time updates.";
-      };
+    <div class="col-md-3">
+        <div class="card h-100 border-warning">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Vulnerabilities Found</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="card-title mb-0" id="vulnCount">0</h2>
+                    <div class="ms-auto">
+                        <i class="fas fa-bug fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-success">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">URLs Scanned</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="card-title mb-0" id="urlCount">0</h2>
+                    <div class="ms-auto">
+                        <i class="fas fa-link fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card h-100 border-info">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">Subdomains Found</h6>
+                <div class="d-flex align-items-center">
+                    <h2 class="card-title mb-0" id="subdomainCount">0</h2>
+                    <div class="ms-auto">
+                        <i class="fas fa-sitemap fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-      ws.onmessage = function(event) {
-        try {
-          const data = JSON.parse(event.data);
-          if(data.event === "status_update") {
-            statusDiv.innerText = `Last update: ${data.timestamp} | Total: ${data.vulnerability_count} | GET: ${data.GET_count} | POST: ${data.POST_count}`;
-          } else if(data.event === "scan_triggered") {
-            statusDiv.innerText = data.message + " (" + data.timestamp + ")";
-          }
-        } catch(e) {
-          console.log("Message:", event.data);
-        }
-      };
+<!-- Progress Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Scan Progress</h5>
+                <div id="scanProgress" class="progress mb-3" style="height: 25px;">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                </div>
+                <div class="d-flex justify-content-between text-muted small">
+                    <span id="scanStatus">No active scan</span>
+                    <span id="scanTime">Time: 0:00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-      ws.onclose = function(event) {
-        statusDiv.innerText = "Disconnected from real‑time updates.";
-      };
+<!-- Main Content -->
+<div class="row">
+    <!-- Recent Vulnerabilities -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Vulnerabilities</h5>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshVulns">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="exportVulns">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Severity</th>
+                                <th>URL</th>
+                                <th>Type</th>
+                                <th>Parameter</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vulnTable">
+                            <!-- Vulnerabilities will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer">
+                <nav>
+                    <ul class="pagination justify-content-center mb-0">
+                        <!-- Pagination will be inserted here -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
 
-      // Handle the scan trigger button.
-      document.getElementById("scanBtn").addEventListener("click", function() {
-        fetch("/scan", { method: "POST" })
-          .then(response => response.json())
-          .then(data => {
-            statusDiv.innerText = data.message;
-          })
-          .catch(err => {
-            statusDiv.innerText = "Error triggering scan: " + err;
-          });
-      });
-    </script>
-  </body>
-</html>
+    <!-- Right Sidebar -->
+    <div class="col-md-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" id="configureBtn">
+                        <i class="fas fa-cog me-2"></i>Configure Scan
+                    </button>
+                    <button class="btn btn-outline-success" id="reportBtn">
+                        <i class="fas fa-file-alt me-2"></i>Generate Report
+                    </button>
+                    <button class="btn btn-outline-info" id="exportBtn">
+                        <i class="fas fa-download me-2"></i>Export Results
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush" id="activityLog">
+                    <!-- Activity items will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+<!-- Configure Scan Modal -->
+<div class="modal fade" id="configureModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Configure Scan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="scanConfigForm">
+                    <div class="mb-3">
+                        <label class="form-label">Target Domain</label>
+                        <input type="text" class="form-control" name="domain" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Scan Interval (seconds)</label>
+                        <input type="number" class="form-control" name="interval" value="300" min="60">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Maximum Concurrent Requests</label>
+                        <input type="number" class="form-control" name="maxConcurrent" value="50" min="1">
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="followRedirects" checked>
+                            <label class="form-check-label">Follow Redirects</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="verifySSL" checked>
+                            <label class="form-check-label">Verify SSL</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="startScanBtn">Start Scan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vulnerability Details Modal -->
+<div class="modal fade" id="vulnDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Vulnerability Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Details will be inserted here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/vuln-table.js"></script>
+<script src="/static/js/activity-log.js"></script>
+{% endblock %}

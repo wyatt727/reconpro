@@ -1,0 +1,34 @@
+.status-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.vulnerability-table {
+    width: 100%;
+    margin-top: 20px;
+}
+
+.progress-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.chart-container {
+    height: 400px;
+    margin-bottom: 30px;
+}
+
+.severity-high {
+    color: #dc3545;
+}
+
+.severity-medium {
+    color: #ffc107;
+}
+
+.severity-low {
+    color: #28a745;
+} 

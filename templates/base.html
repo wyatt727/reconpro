@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ReconPro Dashboard{% endblock %}</title>
+    <!-- Bootstrap 5.3 with dark mode support -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom styles -->
+    <link href="/static/styles.css" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+    <!-- Error handling -->
+    <script>
+        window.onerror = function(msg, url, line) {
+            showNotification('Error', `${msg} (${url}:${line})`, 'error');
+            return false;
+        };
+    </script>
+</head>
+<body>
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="position-fixed w-100 h-100 bg-dark bg-opacity-50 d-none" style="z-index: 9999;">
+        <div class="position-absolute top-50 start-50 translate-middle text-white">
+            <div class="spinner-border" role="status"></div>
+            <div class="mt-2">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Dark mode toggle -->
+    <div class="dropdown position-fixed bottom-0 end-0 mb-3 me-3 bd-mode-toggle">
+        <button class="btn btn-primary py-2 dropdown-toggle d-flex align-items-center" id="bd-theme" type="button" data-bs-toggle="dropdown">
+            <i class="fa-regular fa-sun fa-fw theme-icon-active"></i>
+            <span class="visually-hidden" id="bd-theme-text">Toggle theme</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow">
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light">
+                    <i class="fa-regular fa-sun fa-fw me-2"></i>Light
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="dark">
+                    <i class="fa-regular fa-moon fa-fw me-2"></i>Dark
+                </button>
+            </li>
+            <li>
+                <button type="button" class="dropdown-item d-flex align-items-center active" data-bs-theme-value="auto">
+                    <i class="fa-solid fa-circle-half-stroke fa-fw me-2"></i>Auto
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <i class="fas fa-shield-alt me-2"></i>
+                ReconPro
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="fas fa-tachometer-alt me-1"></i>Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/charts"><i class="fas fa-chart-line me-1"></i>Analytics</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/reports"><i class="fas fa-file-alt me-1"></i>Reports</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/settings"><i class="fas fa-cog me-1"></i>Settings</a>
+                    </li>
+                </ul>
+                <div class="d-flex gap-2">
+                    <button id="scanBtn" class="btn btn-light">
+                        <i class="fas fa-play me-1"></i>New Scan
+                    </button>
+                    <button id="stopBtn" class="btn btn-danger d-none">
+                        <i class="fas fa-stop me-1"></i>Stop Scan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast container for notifications -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        <!-- Toasts will be inserted here dynamically -->
+    </div>
+
+    <!-- Error container -->
+    {% if error %}
+    <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+        <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Main content -->
+    <div class="container-fluid mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container text-center">
+            <span class="text-muted">ReconPro - Web Security Scanner</span>
+            <div class="text-muted small mt-1">Version 1.0.0</div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="/static/js/theme.js"></script>
+    <script src="/static/js/websocket.js"></script>
+    <script src="/static/js/notifications.js"></script>
+    <script src="/static/js/app.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 
