@@ -5,6 +5,9 @@ import argparse
 import logging
 from datetime import datetime
 import aiohttp
+import shutil
+import subprocess
+import sys
 from config import SCAN_INTERVAL, TIMEOUT
 from core import scanner, scraper, detector, fuzz, external, updater, db
 from utils import file_helpers
@@ -22,6 +25,45 @@ async def run_payload_tests(session, fuzz_func, url, param, payloads):
         if result:
             return result
     return None
+
+def check_install_external_tools():
+    tools = ["waybackurls", "gau", "subfinder", "uvicorn"]
+    for tool in tools:
+        if not shutil.which(tool):
+            logging.info(f"{tool} not found; attempting to install {tool}.")
+            if sys.platform == "darwin":
+                if tool == "waybackurls":
+                    # Check if Go is installed
+                    if not shutil.which("go"):
+                        logging.error("Go is not installed. Please install Go to automatically install waybackurls.")
+                        continue
+                    install_cmd = ["go", "install", "github.com/tomnomnom/waybackurls@latest"]
+                else:
+                    install_cmd = ["brew", "install", tool]
+            elif sys.platform.startswith("linux"):
+                install_cmd = ["sudo", "apt-get", "install", "-y", tool]
+            else:
+                logging.error(f"Automatic installation for {tool} is not supported on this platform.")
+                continue
+            
+            try:
+                subprocess.run(install_cmd, check=True)
+                logging.info(f"Successfully installed {tool}.")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Failed to install {tool}: {e}")
+        else:
+            logging.info(f"{tool} is already installed.")
+            
+        # Additional check for uvicorn installation
+        if tool == "uvicorn" and not shutil.which("uvicorn"):
+            logging.info("uvicorn not found; attempting to install uvicorn.")
+            install_cmd = [sys.executable, "-m", "pip", "install", "uvicorn"]
+            try:
+                subprocess.run(install_cmd, check=True)
+                logging.info("Successfully installed uvicorn.")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Failed to install uvicorn: {e}")
+            logging.info(f"{tool} is already installed.")
 
 async def run_scan_cycle(domain):
     logging.info("=== Starting new scan cycle for %s ===", domain)
@@ -81,6 +123,9 @@ def main():
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)
         logging.debug("Verbose debugging enabled")
+
+    # Check and install external tools if needed
+    check_install_external_tools()
 
     try:
         asyncio.run(main_loop(args.domain, args.interval))

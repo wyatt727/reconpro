@@ -3,3 +3,6 @@ aiohttp
 requests
 beautifulsoup4
 tqdm
+fastapi
+uvicorn
+jinja2

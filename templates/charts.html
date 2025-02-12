@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>ReconPro Charts</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <!-- Include Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <div class="header">
+      <h1>ReconPro Real‑Time Charts</h1>
+      <a href="/" class="btn">Dashboard</a>
+    </div>
+    <p>Last updated: {{ timestamp }}</p>
+    <div id="status">Connecting to live updates...</div>
+    <div class="chart-container" style="width: 45%; display: inline-block;">
+      <canvas id="methodChart"></canvas>
+    </div>
+    <div class="chart-container" style="width: 45%; display: inline-block;">
+      <canvas id="timeSeriesChart"></canvas>
+    </div>
+    
+    <script>
+      const statusDiv = document.getElementById("status");
+
+      // Initialize Method Chart (Doughnut Chart)
+      const ctxMethod = document.getElementById('methodChart').getContext('2d');
+      const methodChart = new Chart(ctxMethod, {
+          type: 'doughnut',
+          data: {
+              labels: ['GET', 'POST'],
+              datasets: [{
+                  data: [0, 0],
+                  backgroundColor: ['#36A2EB', '#FF6384']
+              }]
+          },
+          options: {
+              responsive: true,
+              plugins: {
+                  title: {
+                      display: true,
+                      text: 'Vulnerabilities by Method'
+                  }
+              }
+          }
+      });
+
+      // Initialize Time Series Chart (Line Chart)
+      const ctxTime = document.getElementById('timeSeriesChart').getContext('2d');
+      const timeSeriesChart = new Chart(ctxTime, {
+          type: 'line',
+          data: {
+              labels: [],
+              datasets: [{
+                  label: 'Total Vulnerabilities',
+                  data: [],
+                  fill: false,
+                  borderColor: 'rgb(75, 192, 192)',
+                  tension: 0.1
+              }]
+          },
+          options: {
+              responsive: true,
+              plugins: {
+                  title: {
+                      display: true,
+                      text: 'Vulnerability Trend'
+                  }
+              },
+              scales: {
+                  x: {
+                      type: 'time',
+                      time: {
+                          unit: 'minute'
+                      }
+                  }
+              }
+          }
+      });
+
+      // WebSocket to receive live updates for charts
+      const ws = new WebSocket("ws://" + window.location.host + "/ws");
+
+      ws.onopen = function(event) {
+          statusDiv.innerText = "Connected to live chart updates.";
+      };
+
+      ws.onmessage = function(event) {
+          try {
+              const data = JSON.parse(event.data);
+              if(data.event === "status_update") {
+                  // Update the doughnut chart with GET and POST counts
+                  methodChart.data.datasets[0].data = [data.GET_count, data.POST_count];
+                  methodChart.update();
+
+                  // Update the time series chart with total count
+                  const now = new Date(data.timestamp);
+                  timeSeriesChart.data.labels.push(now);
+                  timeSeriesChart.data.datasets[0].data.push(data.vulnerability_count);
+                  // Optionally, limit number of points for clarity
+                  if(timeSeriesChart.data.labels.length > 20) {
+                      timeSeriesChart.data.labels.shift();
+                      timeSeriesChart.data.datasets[0].data.shift();
+                  }
+                  timeSeriesChart.update();
+              } else if(data.event === "scan_triggered") {
+                  statusDiv.innerText = data.message + " (" + data.timestamp + ")";
+              }
+          } catch (e) {
+              console.log("Chart message error:", e);
+          }
+      };
+
+      ws.onclose = function(event) {
+          statusDiv.innerText = "Disconnected from live chart updates.";
+      };
+    </script>
+  </body>
+</html>

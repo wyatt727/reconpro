@@ -16,11 +16,15 @@ def download_files_from_repo(api_url, extension, dest_dir):
         items = response.json()
         for item in items:
             if item.get("type") == "file" and item.get("name", "").lower().endswith(extension):
-                file_url = item.get("download_url")
                 file_name = item.get("name")
+                dest_file = os.path.join(dest_dir, file_name)
+                if os.path.exists(dest_file):
+                    logging.info("File %s already exists in %s, skipping download.", file_name, dest_dir)
+                    continue
+                file_url = item.get("download_url")
                 file_response = requests.get(file_url, timeout=10)
                 file_response.raise_for_status()
-                with open(os.path.join(dest_dir, file_name), "w", encoding="utf-8") as f:
+                with open(dest_file, "w", encoding="utf-8") as f:
                     f.write(file_response.text)
                 logging.info("Downloaded %s to %s", file_name, dest_dir)
     except Exception as e:
