@@ -1,0 +1,19 @@
+---
+description: Helpful on Every request
+globs: *
+---
+---
+description: Helpful on EVERY request
+globs: *
+---
+# RULE 1
+- ALWAYS check [README.md](mdc:README.md) to make get an understanding of how the project is working BEFORE making any changes.
+
+# RULE 2
+- Use Chain of thought/Sequential reasoning to figure out a solution
+
+# RULE 3
+- If there are multiple viable solutions, pick whichever is most viable and implement it fully without additional questions
+
+# RULE 4
+- ALWAYS update [README.md](mdc:README.md) after any changes to ensure that it's always up to date

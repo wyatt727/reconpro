@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReconPro Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+      /* Reset and base styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'Roboto', sans-serif;
+        background-color: #f5f7fa;
+        color: #333;
+        padding: 20px;
+      }
+      /* Header styles */
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      header h1 {
+        font-size: 28px;
+        color: #333;
+      }
+      /* Button styles */
+      .btn {
+        padding: 10px 20px;
+        background-color: #007BFF;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+      .btn:hover {
+        background-color: #0056b3;
+      }
+      /* Update info and section headers */
+      .update-info {
+        margin-bottom: 20px;
+        text-align: right;
+        font-size: 14px;
+        color: #777;
+      }
+      h2 {
+        margin-bottom: 15px;
+        font-size: 22px;
+        font-weight: 500;
+        color: #444;
+      }
+      /* Table styles */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-radius: 5px;
+        overflow: hidden;
+      }
+      thead {
+        background-color: #007BFF;
+        color: #fff;
+      }
+      th, td {
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+      tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+      tbody tr:hover {
+        background-color: #f1f1f1;
+      }
+      /* No data message */
+      .no-data {
+        background-color: #fff;
+        padding: 20px;
+        text-align: center;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        color: #666;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>ReconPro Dashboard</h1>
+      <form action="/scan" method="post" id="scanForm">
+        <button type="submit" class="btn">Trigger New Scan</button>
+      </form>
+    </header>
+    <div class="update-info">
+      Last updated: {{ timestamp }}
+    </div>
+    <section>
+      <h2>Vulnerabilities</h2>
+      {% if vulnerabilities %}
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>URL</th>
+              <th>Parameter</th>
+              <th>Payload</th>
+              <th>Method</th>
+              <th>Similarity</th>
+              <th>GF Matches</th>
+              <th>Nuclei Output</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for vuln in vulnerabilities %}
+              <tr>
+                <td>{{ vuln[0] }}</td>
+                <td>{{ vuln[1] }}</td>
+                <td>{{ vuln[2] }}</td>
+                <td>{{ vuln[3] }}</td>
+                <td>{{ vuln[4] }}</td>
+                <td>{{ "%.2f"|format(vuln[5]) }}</td>
+                <td>{{ vuln[6] }}</td>
+                <td>{{ vuln[7] }}</td>
+                <td>{{ vuln[8] }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="no-data">No vulnerabilities found.</div>
+      {% endif %}
+    </section>
+  </body>
+</html>
