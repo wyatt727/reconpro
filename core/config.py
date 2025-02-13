@@ -4,9 +4,23 @@ Configuration manager for ReconPro with advanced features and validation.
 import os
 import json
 import logging
+import aiohttp
+import ssl
+import certifi
 from dataclasses import dataclass, asdict
 from typing import List, Dict, Any, Optional
 from pathlib import Path
+
+# Directory Configuration
+BASE_DIR = Path(__file__).parent.parent
+DATA_DIR = BASE_DIR / "data"
+PAYLOADS_DIR = DATA_DIR / "payloads"
+NUCLEI_TEMPLATES_DIR = DATA_DIR / "nuclei-templates"
+GF_PATTERNS_DIR = DATA_DIR / "gf-patterns"
+
+# Create directories if they don't exist
+for directory in [DATA_DIR, PAYLOADS_DIR, NUCLEI_TEMPLATES_DIR, GF_PATTERNS_DIR]:
+    directory.mkdir(parents=True, exist_ok=True)
 
 @dataclass
 class ScanConfig:
@@ -19,6 +33,11 @@ class ScanConfig:
     follow_redirects: bool = True
     verify_ssl: bool = True
     user_agent: str = "ReconPro Scanner/1.0"
+    max_redirects: int = 10
+    connection_timeout: int = 10
+    total_timeout: int = 300
+    dns_cache_ttl: int = 10
+    max_connections_per_host: int = 0  # 0 means no limit
 
 @dataclass
 class ProxyConfig:
@@ -28,10 +47,13 @@ class ProxyConfig:
     https: Optional[str] = None
     socks5: Optional[str] = None
     no_proxy: List[str] = None
+    auth: Optional[Dict[str, str]] = None
 
     def __post_init__(self):
         if self.no_proxy is None:
             self.no_proxy = []
+        if self.auth is None:
+            self.auth = {}
 
 @dataclass
 class OutputConfig:
@@ -138,14 +160,50 @@ class Config:
 
     def get_aiohttp_settings(self) -> Dict[str, Any]:
         """Get settings formatted for aiohttp client"""
+        # Create SSL context
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+        if not self.scan.verify_ssl:
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+        # Configure TCP connector
+        connector = aiohttp.TCPConnector(
+            ssl=ssl_context,
+            limit=self.scan.max_concurrent_requests,
+            ttl_dns_cache=self.scan.dns_cache_ttl,
+            limit_per_host=self.scan.max_connections_per_host,
+            force_close=True
+        )
+
+        # Configure timeout
+        timeout = aiohttp.ClientTimeout(
+            total=self.scan.total_timeout,
+            connect=self.scan.connection_timeout,
+            sock_connect=self.scan.connection_timeout,
+            sock_read=self.scan.request_timeout
+        )
+
+        # Configure proxy settings
+        proxy = None
+        proxy_auth = None
+        if self.proxy.enabled:
+            proxy = self.proxy.http or self.proxy.https
+            if self.proxy.auth:
+                proxy_auth = aiohttp.BasicAuth(
+                    login=self.proxy.auth.get('username', ''),
+                    password=self.proxy.auth.get('password', '')
+                )
+
         return {
-            'timeout': aiohttp.ClientTimeout(total=self.scan.request_timeout),
+            'timeout': timeout,
+            'connector': connector,
             'headers': {
                 'User-Agent': self.scan.user_agent
             },
-            'proxy': self.proxy.http if self.proxy.enabled else None,
-            'ssl': self.scan.verify_ssl,
-            'allow_redirects': self.scan.follow_redirects
+            'proxy': proxy,
+            'proxy_auth': proxy_auth,
+            'raise_for_status': True,
+            'trust_env': True  # Allow environment variables to configure proxy
         }
 
     def get_nuclei_command(self, target: str) -> List[str]:

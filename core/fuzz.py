@@ -10,7 +10,7 @@ from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
 from dataclasses import dataclass
 from .config import config
 from .external import run_nuclei_scan, run_gf_scan
-from .retry import RetryHandler
+from .retry import RetryHandler, RetryConfig
 
 @dataclass
 class FuzzResult:
@@ -91,8 +91,10 @@ class Fuzzer:
         self.payload_manager = PayloadManager()
         self.session = None
         self.retry_handler = RetryHandler(
-            max_retries=config.scan.max_retries,
-            delay=config.scan.retry_delay
+            RetryConfig(
+                max_retries=config.scan.max_retries,
+                initial_delay=config.scan.retry_delay
+            )
         )
         self.error_patterns = self._load_error_patterns()
 

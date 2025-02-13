@@ -1,0 +1,38 @@
+{
+    "scan": {
+        "max_concurrent_requests": 50,
+        "request_timeout": 30,
+        "max_retries": 3,
+        "retry_delay": 1,
+        "similarity_threshold": 0.8,
+        "follow_redirects": true,
+        "verify_ssl": true,
+        "user_agent": "ReconPro Scanner/1.0",
+        "max_redirects": 10,
+        "connection_timeout": 10,
+        "total_timeout": 300,
+        "dns_cache_ttl": 10,
+        "max_connections_per_host": 0
+    },
+    "proxy": {
+        "enabled": false,
+        "http": null,
+        "https": null,
+        "socks5": null,
+        "no_proxy": [],
+        "auth": {}
+    },
+    "output": {
+        "log_level": "INFO",
+        "output_dir": "reports",
+        "save_raw_responses": false,
+        "report_format": "html",
+        "notify_on_finding": true
+    },
+    "tools": {
+        "nuclei_templates": ["cves", "vulnerabilities"],
+        "nuclei_severity": ["critical", "high", "medium"],
+        "gf_patterns": ["debug-pages", "takeovers", "php-errors"],
+        "custom_wordlists": ["data/wordlists/subdomains.txt"]
+    }
+} 

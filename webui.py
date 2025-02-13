@@ -165,41 +165,52 @@ class ScanManager:
                 
                 # Run the scan steps
                 subdomains = await scanner.enumerate_subdomains(scan_request.domain)
+                if not subdomains:
+                    await self._update_scan_status(scan_request, "No subdomains found", 10)
+                    subdomains = {scan_request.domain}
+                
                 await self._update_scan_status(scan_request, "Collecting URLs", 20)
-                
                 urls = await scanner.collect_urls(subdomains)
-                await self._update_scan_status(scan_request, "Analyzing parameters", 40)
+                if not urls:
+                    await self._update_scan_status(scan_request, "No URLs found", 30)
+                    return
                 
-                param_urls = scanner.extract_parameterized_urls(urls)
+                await self._update_scan_status(scan_request, "Analyzing parameters", 40)
+                param_urls = await scanner.extract_parameterized_urls()  # Remove urls argument
+                
                 await self._update_scan_status(scan_request, "Fuzzing parameters", 60)
                 
                 # Process parameters
-                total_params = sum(len(params) for _, params in param_urls)
-                processed = 0
+                if param_urls:
+                    total_params = sum(len(params) for _, params in param_urls)
+                    processed = 0
+                    
+                    for url, params in param_urls:
+                        for param in params:
+                            try:
+                                await scanner.fuzz_parameter(url, param)
+                                processed += 1
+                                progress = 60 + (processed / total_params * 30)
+                                await self._update_scan_status(
+                                    scan_request,
+                                    f"Fuzzing parameters ({processed}/{total_params})",
+                                    progress
+                                )
+                            except Exception as e:
+                                logging.error(f"Error fuzzing {url} {param}: {e}")
+                                continue  # Continue with next parameter even if one fails
                 
-                for url, params in param_urls:
-                    for param in params:
-                        try:
-                            await scanner.fuzz_parameter(url, param)
-                            processed += 1
-                            progress = 60 + (processed / total_params * 30)
-                            await self._update_scan_status(
-                                scan_request,
-                                f"Fuzzing parameters ({processed}/{total_params})",
-                                progress
-                            )
-                        except Exception as e:
-                            logging.error(f"Error fuzzing {url} {param}: {e}")
+                await self._update_scan_status(scan_request, "Running vulnerability scan", 90)
+                await scanner._run_vulnerability_scan(subdomains)
                 
-                await self._update_scan_status(scan_request, "Generating report", 90)
-                # Generate report logic here
+                await self._update_scan_status(scan_request, "Generating report", 95)
+                await scanner._generate_report(scan_request.domain, {'subdomains': subdomains, 'urls': urls})
                 
-                await self._update_scan_status(scan_request, "Completed", 100)
-                scan_request.status = "completed"
+                await self._update_scan_status(scan_request, "Scan completed", 100)
                 
             except Exception as e:
-                logging.error(f"Scan execution error: {e}")
-                scan_request.status = "error"
+                logging.error(f"Scan error for {scan_request.domain}: {e}", exc_info=True)
+                await self._update_scan_status(scan_request, f"Scan failed: {str(e)}", 0)
                 raise
 
     async def _update_scan_status(self, scan_request: ScanRequest, message: str, progress: float):

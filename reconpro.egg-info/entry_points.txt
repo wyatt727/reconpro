@@ -1,2 +1,2 @@
 [console_scripts]
-reconpro = reconpro.main:main
+reconpro = main:main

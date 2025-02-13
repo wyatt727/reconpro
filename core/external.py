@@ -4,12 +4,14 @@ import logging
 import json
 import re
 import shlex
+import aiohttp
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 from .config import config
 from functools import wraps
 from datetime import datetime, timedelta
+from .retry import RetryHandler, RetryConfig
 
 logger = logging.getLogger(__name__)
 
@@ -66,12 +68,16 @@ class ToolExecutor:
     def __init__(self):
         self.config = config.tools
         self.logger = logging.getLogger(__name__)
-        self.retry_handler = RetryHandler()
+        self.retry_handler = RetryHandler(RetryConfig())
         self._process_pool = {}
 
     async def run_tool(self, cmd: List[str], timeout: int = 300, parse_json: bool = False) -> Dict[str, Any]:
         """Run an external tool with timeout"""
         try:
+            # Convert command list to string if needed
+            if isinstance(cmd, str):
+                cmd = shlex.split(cmd)
+            
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
@@ -99,7 +105,7 @@ class ToolExecutor:
                 try:
                     output = json.loads(output)
                 except json.JSONDecodeError:
-                    logger.warning("Failed to parse JSON output")
+                    self.logger.warning("Failed to parse JSON output")
 
             return {
                 'output': output,
@@ -108,7 +114,7 @@ class ToolExecutor:
             }
 
         except Exception as e:
-            logger.error(f"Tool execution error: {str(e)}")
+            self.logger.error(f"Tool execution error: {str(e)}")
             raise
 
     async def cleanup(self):

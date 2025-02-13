@@ -90,44 +90,47 @@ def start_webui():
 async def run_scan_cycle(domain):
     logging.info("=== Starting new scan cycle for %s ===", domain)
     updater.update_resources()
-    subdomains = await scanner.enumerate_subdomains(domain)
-    urls = await scanner.collect_urls(subdomains)
-    scraped_urls = await scraper.scrape_urls(list(urls), depth=1)
-    all_urls = urls.union(scraped_urls)
-    param_urls = scanner.extract_parameterized_urls(all_urls)
-    payloads = fuzz.load_payloads()
-    vulnerabilities = []
-    # Create one shared session for all HTTP requests in this scan cycle.
-    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as session:
-        for url, params in param_urls:
-            for param in params:
-                # First try GET fuzzing using the shared session.
-                record = await run_payload_tests(session, fuzz.fuzz_get_param, url, param, payloads)
-                if record:
-                    vulnerabilities.append(record)
-                else:
-                    # If no GET vulnerability found, check if endpoint returns 405
-                    # using the updated send_get_request that accepts a session.
-                    get_response = await fuzz.send_get_request(session, url, param)
-                    if detector.is_method_not_allowed(get_response):
-                        record = await run_payload_tests(session, fuzz.fuzz_post_param, url, param, payloads)
-                        if record:
-                            vulnerabilities.append(record)
-    conn = db.init_db()
-    for v in vulnerabilities:
-        db.insert_vulnerability(
-            conn,
-            v["url"],
-            v["parameter"],
-            v["payload"],
-            v["method"],
-            v["similarity"],
-            v.get("gf_matches", ""),
-            v["nuclei_output"],
-        )
-    db.close_db(conn)
-    file_helpers.generate_report(domain)
-    logging.info("=== Scan cycle complete at %s ===", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
+    try:
+        subdomains = await scanner.enumerate_subdomains(domain)
+        urls = await scanner.collect_urls(subdomains)
+        scraped_urls = await scraper.scrape_urls(list(urls), depth=1)
+        all_urls = urls.union(scraped_urls)
+        param_urls = scanner.extract_parameterized_urls(all_urls)
+        payloads = fuzz.load_payloads()
+        vulnerabilities = []
+        # Create one shared session for all HTTP requests in this scan cycle.
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=TIMEOUT)) as session:
+            for url, params in param_urls:
+                for param in params:
+                    # First try GET fuzzing using the shared session.
+                    record = await run_payload_tests(session, fuzz.fuzz_get_param, url, param, payloads)
+                    if record:
+                        vulnerabilities.append(record)
+                    else:
+                        # If no GET vulnerability found, check if endpoint returns 405
+                        # using the updated send_get_request that accepts a session.
+                        get_response = await fuzz.send_get_request(session, url, param)
+                        if detector.is_method_not_allowed(get_response):
+                            record = await run_payload_tests(session, fuzz.fuzz_post_param, url, param, payloads)
+                            if record:
+                                vulnerabilities.append(record)
+        conn = db.init_db()
+        for v in vulnerabilities:
+            db.insert_vulnerability(
+                conn,
+                v["url"],
+                v["parameter"],
+                v["payload"],
+                v["method"],
+                v["similarity"],
+                v.get("gf_matches", ""),
+                v["nuclei_output"],
+            )
+        db.close_db(conn)
+        file_helpers.generate_report(domain)
+        logging.info("=== Scan cycle complete at %s ===", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
+    except Exception as e:
+        logging.error("Error during scan cycle: %s", e)
 
 async def main_loop(domain, interval):
     while True:

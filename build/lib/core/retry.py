@@ -32,8 +32,14 @@ class RetryConfig:
 
 class RetryHandler:
     """Advanced retry handler with multiple backoff strategies"""
-    def __init__(self, config: Optional[RetryConfig] = None):
-        self.config = config or RetryConfig()
+    def __init__(self, config: Optional[Union[RetryConfig, int]] = None, strategy: str = 'exponential'):
+        if isinstance(config, int):
+            self.config = RetryConfig(max_retries=config)
+        elif isinstance(config, RetryConfig):
+            self.config = config
+        else:
+            self.config = RetryConfig()
+        self.strategy = strategy
         self.logger = logging.getLogger(__name__)
 
     def calculate_delay(self, attempt: int, strategy: str = 'exponential') -> float:
@@ -87,44 +93,42 @@ class RetryHandler:
             return status_code in self.config.retry_on_status_codes
         return False
 
-    def retry(self, strategy: str = 'exponential'):
-        """Decorator for retrying async functions with specified strategy"""
-        def decorator(func: Callable):
-            @wraps(func)
-            async def wrapper(*args, **kwargs):
-                last_exception = None
-                attempt = 1
+    def __call__(self, func: Callable):
+        """Make the class callable as a decorator"""
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            last_exception = None
+            attempt = 1
 
-                while attempt <= self.config.max_retries + 1:
-                    try:
-                        result = await func(*args, **kwargs)
+            while attempt <= self.config.max_retries + 1:
+                try:
+                    result = await func(*args, **kwargs)
 
-                        # Check status code for HTTP responses
-                        status_code = getattr(result, 'status', None)
-                        if status_code and self.should_retry(status_code=status_code):
-                            raise RetryableStatusCode(f"Received status code {status_code}")
+                    # Check status code for HTTP responses
+                    status_code = getattr(result, 'status', None)
+                    if status_code and self.should_retry(status_code=status_code):
+                        raise RetryableStatusCode(f"Received status code {status_code}")
 
-                        return result
+                    return result
 
-                    except Exception as e:
-                        last_exception = e
-                        should_retry = self.should_retry(exception=e)
+                except Exception as e:
+                    last_exception = e
+                    should_retry = self.should_retry(exception=e)
 
-                        if not should_retry or attempt > self.config.max_retries:
-                            break
+                    if not should_retry or attempt > self.config.max_retries:
+                        break
 
-                        delay = self.calculate_delay(attempt, strategy)
-                        self.logger.warning(
-                            "Attempt %d/%d failed: %s. Retrying in %.2f seconds...",
-                            attempt, self.config.max_retries, str(e), delay
-                        )
-                        await self.sleep_with_jitter(delay)
-                        attempt += 1
+                    delay = self.calculate_delay(attempt, self.strategy)
+                    self.logger.warning(
+                        "Attempt %d/%d failed: %s. Retrying in %.2f seconds...",
+                        attempt, self.config.max_retries, str(e), delay
+                    )
+                    await self.sleep_with_jitter(delay)
+                    attempt += 1
 
-                if last_exception:
-                    raise last_exception
-            return wrapper
-        return decorator
+            if last_exception:
+                raise last_exception
+        return wrapper
 
 class RetryableStatusCode(Exception):
     """Exception raised when a retryable status code is received"""

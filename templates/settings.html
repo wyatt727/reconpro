@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}ReconPro - Settings{% endblock %}
+
+{% block content %}
+<!-- Settings Overview -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Scanner Settings</h5>
+            </div>
+            <div class="card-body">
+                <form id="settingsForm">
+                    <!-- General Settings -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">General Settings</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Concurrent Scans</label>
+                            <input type="number" class="form-control" name="maxConcurrentScans" min="1" max="10" value="3">
+                            <div class="form-text">Maximum number of concurrent scans (1-10)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Default Scan Timeout (minutes)</label>
+                            <input type="number" class="form-control" name="scanTimeout" min="1" value="60">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="autoOpenBrowser" checked>
+                            <label class="form-check-label">Auto-open browser when starting web UI</label>
+                        </div>
+                    </div>
+
+                    <!-- Scan Settings -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">Scan Settings</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Subdomain Enumeration Depth</label>
+                            <select class="form-select" name="subdomainDepth">
+                                <option value="1">Basic (1 level)</option>
+                                <option value="2" selected>Standard (2 levels)</option>
+                                <option value="3">Deep (3 levels)</option>
+                            </select>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="followRedirects" checked>
+                            <label class="form-check-label">Follow Redirects</label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="screenshotPages">
+                            <label class="form-check-label">Take Screenshots of Pages</label>
+                        </div>
+                    </div>
+
+                    <!-- API Settings -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">API Settings</h6>
+                        <div class="mb-3">
+                            <label class="form-label">API Key</label>
+                            <input type="password" class="form-control" name="apiKey">
+                            <div class="form-text">Used for external service integrations</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Webhook URL</label>
+                            <input type="url" class="form-control" name="webhookUrl">
+                            <div class="form-text">Receive scan notifications via webhook</div>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="button" class="btn btn-secondary me-2" id="resetBtn">Reset to Default</button>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/settings.js"></script>
+{% endblock %} 
